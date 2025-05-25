@@ -2,6 +2,7 @@ import { Request, response, Response } from "express";
 import * as Yup from "yup";
 
 import UserModel from "../models/user.model";
+import { encrypt } from "../utils/encryption";
 
 
 type TRegister = {
@@ -10,6 +11,11 @@ type TRegister = {
     email: string;
     password: string;
     confirmPassword: string;
+}
+
+type TLogin = {
+    identifier: string;
+    password: string;
 }
 
 const registerValidateSchema = Yup.object({
@@ -23,6 +29,11 @@ const registerValidateSchema = Yup.object({
         .required('Confirm password is required')
         .oneOf([Yup.ref('password')], 'Passwords not match'),
 })
+
+const loginValidateSchema = Yup.object({
+    identifier: Yup.string().required('username or email is required'),
+    password: Yup.string().required('Password is required'),
+});
 
 export default {
     async register(req: Request, res: Response) {
@@ -54,4 +65,69 @@ export default {
             });
         }
     },
+
+    async login(req: Request, res: Response) {
+        const { 
+            identifier,
+            password
+        } = req.body as unknown as TLogin;
+
+        try {
+            // Validate input
+            await loginValidateSchema.validate({ identifier, password }, { abortEarly: false });
+
+            // get user by identifier (email or username)
+            const userByIdentifier = await UserModel.findOne({
+                $or: [
+                    { email: identifier },
+                    { userName: identifier }
+                ]
+            });
+
+            if (!userByIdentifier) {
+                return res.status(404).json({
+                    message: 'User not found!',
+                    data: null
+                });
+            }
+
+            // validate user
+            const isValidatePassword: boolean = encrypt(password) === userByIdentifier.password;
+            if (!isValidatePassword) {
+                return res.status(400).json({
+                    message: 'Invalid password!',
+                    data: null
+                });
+            }
+
+            // Success login
+            res.status(200).json({
+                message: "Login successful!",
+                data: userByIdentifier
+            })
+
+        }catch (error) {
+            // Cek apakah error adalah instance dari Yup.ValidationError
+            if (error instanceof Yup.ValidationError) {
+            // Jika error pada identifier, kirim hanya error identifier
+            const identifierError = error.inner.find(e => e.path === 'identifier');
+                if (identifierError) {
+                    return res.status(400).json({
+                        message: identifierError.message,
+                        data: null
+                    });
+                }
+                // Jika tidak ada error identifier, kirim error pertama
+                return res.status(400).json({
+                    message: error.errors[0],
+                    data: null
+                });
+            }
+            // Error lain
+            return res.status(400).json({
+                message: 'Validation error',
+                data: null
+            });
+        }
+    }
 };
