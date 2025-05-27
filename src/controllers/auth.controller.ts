@@ -1,8 +1,10 @@
-import { Request, response, Response } from "express";
+import { Request, Response } from "express";
 import * as Yup from "yup";
 
 import UserModel from "../models/user.model";
 import { encrypt } from "../utils/encryption";
+import { generateToken } from "../utils/jwt";
+import { IReqUser } from "../middlewares/auth.middleware";
 
 
 type TRegister = {
@@ -84,6 +86,7 @@ export default {
                 ]
             });
 
+            // Check if user exists
             if (!userByIdentifier) {
                 return res.status(404).json({
                     message: 'User not found!',
@@ -91,7 +94,7 @@ export default {
                 });
             }
 
-            // validate user
+            // validate password
             const isValidatePassword: boolean = encrypt(password) === userByIdentifier.password;
             if (!isValidatePassword) {
                 return res.status(400).json({
@@ -100,24 +103,28 @@ export default {
                 });
             }
 
+            const token = generateToken({
+                id: userByIdentifier._id,
+                role: userByIdentifier.role,
+            });
+
+
             // Success login
             res.status(200).json({
                 message: "Login successful!",
-                data: userByIdentifier
+                data: token,
             })
 
         }catch (error) {
-            // Cek apakah error adalah instance dari Yup.ValidationError
+            console.error(error); // Tambahkan ini untuk debug
             if (error instanceof Yup.ValidationError) {
-            // Jika error pada identifier, kirim hanya error identifier
-            const identifierError = error.inner.find(e => e.path === 'identifier');
+                const identifierError = error.inner.find(e => e.path === 'identifier');
                 if (identifierError) {
                     return res.status(400).json({
                         message: identifierError.message,
                         data: null
                     });
                 }
-                // Jika tidak ada error identifier, kirim error pertama
                 return res.status(400).json({
                     message: error.errors[0],
                     data: null
@@ -125,7 +132,28 @@ export default {
             }
             // Error lain
             return res.status(400).json({
-                message: 'Validation error',
+                message: error instanceof Error ? error.message : 'Validation error',
+                data: null
+            });
+        }
+    },
+
+    async me(req: IReqUser, res: Response) {
+        try {   
+            // Ambil user dari request
+            const user = req.user;
+            // perintah query untuk mendapatkan user berdasarkan id
+            const result = await UserModel.findById(user?.id)
+
+            res.status(200).json({
+                message: "Success get user profile!",
+                data: result,
+            });
+
+        } catch (error) {
+            const err = error as unknown as Error;
+            res.status(400).json({
+                message: err.message,
                 data: null
             });
         }

@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import { encrypt } from '../utils/encryption';
 
-export interface User extends mongoose.Document {
+export interface User {
     fullName: string;
     userName: string;
     email: string;
@@ -26,7 +26,6 @@ const userSchema = new Schema<User>({
     email: {
         type: Schema.Types.String,
         required: true,
-        // unique: true
     },
     password: {
         type: Schema.Types.String,
@@ -39,7 +38,7 @@ const userSchema = new Schema<User>({
     },
     profilePicture: {
         type: Schema.Types.String,
-        default: 'user.jpg'
+        default: '', // kosong, nanti diisi di pre-save
     },
     isActive: {
         type: Boolean,
@@ -52,12 +51,25 @@ const userSchema = new Schema<User>({
     timestamps: true,
 });
 
-userSchema.pre('save', function (next){
+userSchema.pre('save', function (next) {
     const user = this as User;
     user.password = encrypt(user.password);
+
+    // Set default profilePicture jika belum diisi
+    if (!user.profilePicture) {
+        // Ganti encodeURIComponent(user.fullName) jika ingin pakai fullName
+        user.profilePicture = `https://avatar.iran.liara.run/username?username=${encodeURIComponent(user.userName)}`;
+    }
+
     next();
 })
 
+
+userSchema.methods.toJSON = function () {
+    const user = this.toObject();
+    delete user.password; // Remove password from the output
+    return user;
+}
 
 const UserModel = mongoose.model("User", userSchema);
 
