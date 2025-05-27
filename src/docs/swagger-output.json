@@ -7,7 +7,7 @@
   },
   "servers": [
     {
-      "url": "https://wpu-mern-backend.vercel.app/",
+      "url": "https://wpu-mern-backend.vercel.app/api",
       "description": "Deployed server"
     },
     {
