@@ -69,6 +69,13 @@ export default {
     },
 
     async login(req: Request, res: Response) {
+        /**
+            #swagger.requestBody = {
+                required: true,
+                schema: {$ref: "#/components/schemas/LoginRequest"}
+            }
+         */
+
         const { 
             identifier,
             password
@@ -139,6 +146,12 @@ export default {
     },
 
     async me(req: IReqUser, res: Response) {
+        /**
+        #swagger.security = [{
+            "bearerAuth": []
+        }]
+         */
+
         try {   
             // Ambil user dari request
             const user = req.user;

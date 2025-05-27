@@ -38,7 +38,7 @@ const userSchema = new Schema<User>({
     },
     profilePicture: {
         type: Schema.Types.String,
-        default: '', // kosong, nanti diisi di pre-save
+        default: '',
     },
     isActive: {
         type: Boolean,
@@ -54,13 +54,6 @@ const userSchema = new Schema<User>({
 userSchema.pre('save', function (next) {
     const user = this as User;
     user.password = encrypt(user.password);
-
-    // Set default profilePicture jika belum diisi
-    if (!user.profilePicture) {
-        // Ganti encodeURIComponent(user.fullName) jika ingin pakai fullName
-        user.profilePicture = `https://avatar.iran.liara.run/username?username=${encodeURIComponent(user.userName)}`;
-    }
-
     next();
 })
 
