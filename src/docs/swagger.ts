@@ -3,7 +3,7 @@ import swaggerAutogen from "swagger-autogen";
 const doc = {
     servers: [
         {
-            url: "https://wpu-mern-backend.vercel.app/",
+            url: "https://wpu-mern-backend.vercel.app/api",
             description: "Deployed server"
         },
         {
